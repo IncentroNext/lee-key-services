@@ -17,6 +17,24 @@ As the one are in charge of managing user and service account access privileges,
 you are the last bastion of hope. At least until the devs get back from lunch.
 
 
+## Rules
+
+The goal of the games is to score as little points as possible via the Attacker
+Portal without disrupting normal functions.
+
+* All normal process flows should remain functional:
+    * creating new orders
+    * creating payments for orders
+* Each service has its own service account, these have been already created.
+* The service accounts already have (poorly selected) permissions.
+* You can only work by adding and removing permissions, by any means: the web 
+  console, command line (gcloud) or (REST) APIs.
+* You may (or need) not create (or reassign) service accounts.
+* You may (or need) not redeploy services.
+* You should not inspect the code - this decreases learning potential. 
+* You may not alter code.
+
+
 ## Setup
 
 ### Pre-requisites
@@ -46,20 +64,6 @@ following commands:
 2. `make init-project PROJECT=<project id>` (lists links of Google APIs to activate)
 3. `make project-setup PROJECT=<project id>` (deploys services, sets up data)
 
-
-## Rules
-
-* Each service has its own service account, these have been already created.
-* You may (or need) not create (or reassign) service accounts.
-* The service accounts already have (poorly selected) permissions.
-* All normal process flows should remain functional:
-    * creating new orders
-    * creating payments for orders
-* You can only work by adding and removing permissions, by any means: the web 
-  console, command line (gcloud) or (REST) APIs.
-* You may (or need) not redeploy services.
-* You should not inspect the code - this decreases learning potential. 
-* You may not alter code.
 
 
 ## Interesting Related Reads
