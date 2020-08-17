@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lee-Key Services Portal</title>
+</head>
+<body>
+<h1>Lee-Key Services Portal</h1>
+
+<div>
+    <h2>Create Order</h2>
+
+    <p>
+        <label for="customer-input">Customer</label>
+        <input id="customer-input" value="alice">
+    </p>
+    <p>
+        <label for="name-input">Name</label>
+        <input id="name-input" value="shoes">
+    </p>
+    <p>
+        <label for="quantity-input">Quantity</label>
+        <input id="quantity-input" type="number" value="3">
+    </p>
+
+    <button id="create-order-button">Create Order</button>
+
+    <p id="create-order-result-div"></p>
+</div>
+
+<div>
+    <h2>Create Payment</h2>
+
+    <p>
+        <label for="order-number-input">Order Number</label>
+        <input id="order-number-input" type="number" value="42">
+    </p>
+
+    <button id="create-payment-button">Create Payment</button>
+
+    <p id="create-payment-result-div"></p>
+</div>
+
+</body>
+
+<script src="ajax-0.1.0.js"></script>
+<script type="application/javascript">
+  (function () {
+    const createOrderButton = document.getElementById("create-order-button");
+    const customerInput = document.getElementById("customer-input");
+    const nameInput = document.getElementById("name-input");
+    const quantityInput = document.getElementById("quantity-input");
+    const orderNumberInput = document.getElementById("order-number-input");
+    const createPaymentButton = document.getElementById("create-payment-button");
+
+    function reportFn(id, err) {
+      let elem = document.getElementById(id);
+      return function (resp) {elem.innerText = err ? resp.responseText : resp};
+    }
+
+    createOrderButton.addEventListener("click",
+        function () {
+          let order = {
+            "customer": customerInput.value,
+            "name": nameInput.value,
+            "quantity": parseInt(quantityInput.value)
+          };
+          doHttpPostJson("/orders", JSON.stringify(order),
+              reportFn("create-order-result-div", false),
+              reportFn("create-order-result-div", true));
+        })
+
+    createPaymentButton.addEventListener("click",
+        function () {
+          let payment = {
+            "orderNumber": parseInt(orderNumberInput.value)
+          };
+          doHttpPostJson("/payments", JSON.stringify(payment),
+              reportFn("create-payment-result-div", false),
+              reportFn("create-payment-result-div", true));
+        })
+  })();
+</script>
+
+</html>

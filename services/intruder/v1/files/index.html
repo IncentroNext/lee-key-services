@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lee-Key Services Attacker Portal</title>
+</head>
+<body>
+<h1>Lee-Key Services Attacker Portal</h1>
+
+<div>
+    <h2>Normal Operation</h2>
+
+    <button id="normal-op-btn">Test</button>
+    <span id="normal-op-result-span"></span>
+
+    <h2>Attacks</h2>
+
+    <div>
+        <span>Total Score: </span><span id="total-score-span"></span>
+    </div>
+    <button id="execute-all-btn">Execute All</button>
+
+    <div id="attacks-div"></div>
+
+</div>
+
+</body>
+
+<script src="ajax-0.1.0.js"></script>
+<script type="application/javascript">
+  (function () {
+    const normalOpButton = document.getElementById('normal-op-btn');
+    const normalOpResultSpan = document.getElementById('normal-op-result-span');
+    const attacksDiv = document.getElementById('attacks-div');
+    const totalScoreSpan = document.getElementById('total-score-span');
+    const executeAllButton = document.getElementById('execute-all-btn');
+    const details = 'true' === new URL(document.location).searchParams.get('details');
+
+    function testNormalOp() {
+      doHttpPostJson('/tests/normal', '',
+          function (b) {
+            normalOpResultSpan.innerText = b;
+            if (b === "Success") {
+              normalOpResultSpan.style = 'color: green';
+            } else {
+              normalOpResultSpan.style = 'color: red';
+            }
+          },
+          function (b) {normalOpResultSpan.innerText = b;});
+    }
+
+    function getAttacks() {
+      doHttpGet('/attacks', addAttacks, console.log)
+    }
+
+    function refreshScore() {
+      let acc = 0;
+      let elems = document.getElementsByClassName('score-span');
+      for (let i = 0; i < elems.length; i += 1) {
+        let score = parseInt(elems[i].innerText);
+        if (score) {
+          acc += score;
+        }
+      }
+      totalScoreSpan.innerText = '' + acc;
+    }
+
+    function launchAll() {
+      let elems = document.getElementsByClassName('attack-span');
+      for (let i = 0; i < elems.length; i += 1) {
+        attack(elems[i].innerText)();
+      }
+    }
+
+    function attack(k) {
+      let res = document.getElementById('attack-result-' + k + '-span');
+      let resScore = document.getElementById('attack-result-' + k + '-score-span');
+      let resDetails = document.getElementById('attack-result-' + k + '-details-span');
+      let resLog = document.getElementById('attack-result-' + k + '-log-span');
+      let resLoot = document.getElementById('attack-result-' + k + '-loot-span');
+      return function () {
+        doHttpPostJson('/attacks/' + k, '{}', function (b) {
+              let o = JSON.parse(b);
+              if (o['score'] > 0) {
+                res.style = 'color: green';
+                res.innerText = 'Success';
+              } else {
+                res.style = 'color: red';
+                res.innerText = 'Fail';
+              }
+              resScore.innerText = o['score'];
+              resDetails.innerText = 'Attack: ' + o['attackResults'][0]['explanation'];
+              let logMessage = o['attackResults'][0]['log'];
+              if (!!logMessage) {
+                resLog.innerText = 'logs: ' + logMessage;
+              }
+              let loot = o['attackResults'][0]['loot']
+              if (!!loot) {
+                resLoot.innerText = JSON.stringify(loot, null, 2);
+              }
+              refreshScore();
+            }
+        );
+      }
+    }
+
+    function addAttacks(d) {
+      let items = JSON.parse(d);
+      let comp = '';
+      for (let k in items) {
+        if (items.hasOwnProperty(k)) {
+          let item = items[k];
+          if (item['component'] !== comp) {
+            let hd = document.createElement('h3');
+            hd.innerText = item['component'];
+            comp = item['component'];
+            attacksDiv.appendChild(hd);
+          }
+          let elem = document.createElement('div');
+          elem.innerHTML =
+              '<div id="attack-' + k + '-div">' +
+              '<span>Attack </span><span class="attack-span">' + k + '</span> ' +
+              '<button id="attack-' + k + '-btn">Execute</button> ' +
+              '<span id="attack-result-' + k + '-span"></span> ' +
+              '<span id="attack-result-' + k + '-score-span" class="score-span"></span> ' +
+              '<div' + (details ? '' : ' hidden') + '>' +
+              '<p id="attack-result-' + k + '-details-span"></p>' +
+              '<pre id="attack-result-' + k + '-log-span"></pre>' +
+              '<pre id="attack-result-' + k + '-loot-span"></pre>' +
+              '</div>' +
+              '</div>';
+          attacksDiv.appendChild(elem);
+          document.getElementById('attack-' + k + '-div')
+              .addEventListener('click', attack(k));
+        }
+      }
+    }
+
+    getAttacks();
+    refreshScore();
+    executeAllButton.addEventListener('click', launchAll);
+    normalOpButton.addEventListener('click', testNormalOp);
+  })();
+</script>
+
+</html>
