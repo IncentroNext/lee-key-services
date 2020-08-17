@@ -19,12 +19,32 @@ you are the last bastion of hope. At least until the devs get back from lunch.
 
 ## Setup
 
-To set up a sandbox project you will need the following:
+### Pre-requisites
 
 * Project Owner role on a (preferably blank) Google Cloud project
-* Google Cloud SDK
+* Google Cloud SDK (gcloud, gsutil, ...)
 * Linux or MacOS command shell (tested with Ubuntu / Bash)
 * GNU Make
+* Docker
+
+### Project Setup
+
+At some point this project might use Cloud Build, or it might not. For the 
+foreseeable future, everything is handled by locally run scripts. 
+
+If you have never used Docker in combination with Google Container Registry, you
+first need to run the following command (as per https://cloud.google.com/container-registry/docs/pushing-and-pulling)
+```shell script
+gcloud auth configure-docker
+```
+
+The application code and project setup scripts are located in the `services`
+directory. From there, execute and follow the instructions provided the 
+following commands:
+
+1. `make services-build` (builds docker images) (only once or after code change)
+2. `make init-project PROJECT=<project id>` (lists links of Google APIs to activate)
+3. `make project-setup PROJECT=<project id>` (deploys services, sets up data)
 
 
 ## Rules
