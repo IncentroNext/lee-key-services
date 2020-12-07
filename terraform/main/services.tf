@@ -35,3 +35,9 @@ resource "google_project_service" "cloudbuild" {
   disable_dependent_services = true
   disable_on_destroy = true
 }
+
+resource "time_sleep" "iam_service_enable_delay" {
+  depends_on = [google_project_service.iam]
+
+  create_duration = "60s"
+}

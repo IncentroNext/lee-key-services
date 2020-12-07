@@ -12,14 +12,15 @@ resource "google_project_service" "appengine" {
   disable_on_destroy = true
 }
 
-resource "time_sleep" "service_enable_delay" {
+resource "time_sleep" "appengine_service_enable_delay" {
   depends_on = [google_project_service.appengine]
 
   create_duration = "60s"
 }
 
+// cannot be destroyed, a fact ignored by Terraform
 resource "google_app_engine_application" "app" {
-  depends_on = [time_sleep.service_enable_delay]
+  depends_on = [time_sleep.appengine_service_enable_delay]
 
   project     = var.project
   location_id = var.app_region

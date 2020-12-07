@@ -9,6 +9,8 @@ resource "google_storage_bucket" "invoices-bucket" {
 }
 
 resource "google_service_account" "paymentservice_v1" {
+  depends_on = [time_sleep.iam_service_enable_delay]
+
   account_id   = "paymentservice-v1"
 }
 
