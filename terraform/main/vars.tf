@@ -1,0 +1,3 @@
+
+variable "proj_hash" {
+}
