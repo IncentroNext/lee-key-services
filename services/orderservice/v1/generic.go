@@ -16,8 +16,6 @@ import (
 	"strings"
 )
 
-const metadataIdTokenPath = "/instance/service-accounts/default/identity"
-
 var websiteServiceScheme = os.Getenv("WEBSITE_SERVICE")
 var orderServiceScheme = os.Getenv("ORDER_SERVICE")
 var paymentServiceScheme = os.Getenv("PAYMENT_SERVICE")
