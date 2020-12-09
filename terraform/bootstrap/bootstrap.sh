@@ -2,25 +2,71 @@
 
 set -euo pipefail
 
-SCRIPTS="../scripts"
-SECRETS="../secrets"
-MAIN="../main"
-
+NAME="terraform"
+SCRIPTS="./"
+CREDENTIALS="var/terraform.json"
+OUTPUT="var/bootstrapped.tfvars"
 
 function usage() {
-	echo "${0} -p PROJECT"
+	# TODO(hvl): defaults not correct if printed after parameter parsing
+	echo "${0} -p PROJECT [-n NAME] [-s SCRIPTS] [-c CREDENTIALS] [-o OUTPUT]"
 	echo "Bootstraps a project, snaring the elusive Cloud Run project hash."
 	echo
-	echo "-p PROJECT	Google Cloud Project ID"
+	echo "-p PROJECT		Google Cloud Project ID"
+	echo "-n NAME			Service account name (default: ${NAME})"
+	echo "-s SCRIPTS		directory where manage-policy-file.py is located (default: ${SCRIPTS})"
+	echo "-c CREDENTIALS	file to store Terraform service account key in (default: ${CREDENTIALS})"
+	echo "-o OUTPUT			file to write output variables (default: ${OUTPUT})"
 }
 
+function prepare_dir() {
+	_DIR=$(dirname "${1}")
+	mkdir -p "${_DIR}"
+}
+
+function setup_service_account() {
+	_PROJECT="$1"
+	_NAME="$2"
+	_SCRIPTS="$3"
+
+	# Create Terraform service account
+	gcloud iam service-accounts create "${_NAME}" \
+		--project="${_PROJECT}"
+
+	# Set authorisations on Terraform service account
+	_TMP_DIR="tmp-$(uuidgen)"
+	_POLICY_FILE="${_TMP_DIR}/policy-file"
+
+	mkdir -p "${_TMP_DIR}"
+
+	gcloud projects get-iam-policy "${_PROJECT}" \
+		--format json > "${_POLICY_FILE}"
+	"${_SCRIPTS}/manage-policy-file.py" -i "${_POLICY_FILE}" \
+		-e "${_NAME}@${_PROJECT}.iam.gserviceaccount.com" -t serviceAccount \
+		-a add -r "roles/editor"
+	gcloud projects set-iam-policy "${_PROJECT}" "${_POLICY_FILE}"
+
+	rm -rf "${_TMP_DIR}"
+}
 
 PROJECT=
 
-while getopts "p:" o; do
+while getopts "p:n:c:s:o:" o; do
 	case "${o}" in
 	p)
 		PROJECT="${OPTARG}"
+		;;
+	n)
+		NAME="${OPTARG}"
+		;;
+	c)
+		CREDENTIALS="${OPTARG}"
+		;;
+	s)
+		SCRIPTS="${OPTARG}"
+		;;
+	o)
+		OUTPUT="${OPTARG}"
 		;;
 	*)
 		usage
@@ -34,26 +80,33 @@ if [ -z "${PROJECT}" ]; then
 	exit 1
 fi
 
-SERVICE_ACCOUNT="terraform@${PROJECT}.iam.gserviceaccount.com"
+if [ -f "${CREDENTIALS}" ]; then
+	usage
+	echo "Credentials file already exists, will not overwrite ${CREDENTIALS}"
+	exit 1
+fi
+
+if [ ! -f "${SCRIPTS}/manage-policy-file.py" ]; then
+	usage
+	echo "Could not find manage-policy-file.py in ${SCRIPTS}"
+	exit 1
+fi
+
+if [ -f "${OUTPUT}" ]; then
+	usage
+	echo "Output file already exists, will not overwrite ${OUTPUT}"
+	exit 1
+fi
+
+exit
 
 # Create Terraform service account
-gcloud iam service-accounts create terraform \
-	--project="${PROJECT}"
-
-# Set authorisations on Terraform service account
-mkdir -p tmp
-POLICY_FILE=tmp/policy-file
-gcloud projects get-iam-policy hayovanloon-terraform-7199127a \
-	--format json > "${POLICY_FILE}"
-"${SCRIPTS}"/manage-policy-file.py -i "${POLICY_FILE}" \
-	-e "${SERVICE_ACCOUNT}" -t serviceAccount \
-	-a add -r "roles/editor"
-gcloud projects set-iam-policy "${PROJECT}" "${POLICY_FILE}"
-rm -rf tmp/
+setup_service_account "${PROJECT}" "${NAME}" "${SCRIPTS}"
+SERVICE_ACCOUNT="${NAME}@${PROJECT}.iam.gserviceaccount.com"
 
 # Get credentials file for Terraform service account
-mkdir -p "${SECRETS}"
-gcloud iam service-accounts keys create "${SECRETS}/terraform.json" \
+prepare_dir "${CREDENTIALS}"
+gcloud iam service-accounts keys create "${CREDENTIALS}" \
 	--iam-account="${SERVICE_ACCOUNT}" \
 	--project="${PROJECT}"
 
@@ -61,18 +114,18 @@ gcloud iam service-accounts keys create "${SECRETS}/terraform.json" \
 terraform init
 terraform apply -auto-approve \
 	-var project="${PROJECT}" \
-	-var secrets_file="${SECRETS}/terraform.json"
+	-var secrets_file="${CREDENTIALS}"
 
 # Store variables from bootstrap
-mkdir -p "${MAIN}/etc"
-terraform output > "${MAIN}/etc/bootstrapped.tfvars"
+prepare_dir "${OUTPUT}"
+terraform output > "${OUTPUT}"
 
 # Clean up dummy service
 # This will leave this module in a transitive state. That's fine.
 terraform destroy -auto-approve \
 	-var project="${PROJECT}" \
-	-var secrets_file="${SECRETS}/terraform.json" \
+	-var secrets_file="${CREDENTIALS}" \
 	-target="google_service_account.dummy_service" \
 	-target="google_cloud_run_service.dummy_service"
 
-echo
+echo "Bootstrap done; variables have been written to ${OUTPUT}."
